@@ -1,0 +1,50 @@
+<html>
+<head>
+    <link rel="stylesheet" type="text/css" href="index.css"/>
+
+    <!-- manifest v3 does not allow remotely hosted code -->
+<!--    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js" integrity="sha512-a+SUDuwNzXDvz4XrIcXHuCf089/iJAoN4lmrXJg18XnduKK6YlDHNRalv4yd1N40OKI80tFidF+rqTFKGPoWFQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>-->
+</head>
+<body>
+<h1>Validate file</h1>
+<div>
+    <div id="statusDiv" class="flexHorizontal">
+        <div>Status:</div>
+        <div class="flexHorizontalSpacer"></div>
+        <div id="statusText"></div>
+    </div>
+
+    <div id="checkSumTypeInputDiv" class="flexHorizontal">
+        <div>Checksum type:</div>
+        <div class="flexHorizontalSpacer"></div>
+        <select id="checkSumTypeInput">
+            <option value="SHA256">SHA256</option>
+            <option value="MD5">MD5</option>
+        </select>
+    </div>
+    <div id="checkSumInputDiv" class="flexHorizontal">
+        <div>Checksum:</div>
+        <div class="flexHorizontalSpacer"></div>
+        <input id="checkSumTextInput" type="text"/>
+    </div>
+    <div>
+        <input id="fileInput" type="file"/>
+    </div>
+
+    <div id="actionDiv" class="flexHorizontal">
+        <button id="validateBtn">Validate</button>
+        <div class="flexHorizontalSpacer"></div>
+        <button id="clearBtn">Clear</button>
+    </div>
+
+    <div id="resultDiv" class="flexHorizontal">
+        <div>Result:</div>
+        <div class="flexHorizontalSpacer"></div>
+        <div id="resultText"></div>
+    </div>
+</div>
+
+<script src="crypto-js.min.js"></script>
+<script src="index.js"></script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+.flexHorizontal {
+    display: flex;
+}
+
+.flexHorizontalSpacer {
+    flex: 0 0 8px;
+}
