@@ -1,6 +1,7 @@
 import React, { ChangeEvent, useCallback, useState } from 'react';
 import './Popup.css';
 import { CheckSumType, Md5CheckSum, Sha256CheckSum } from '../../app/CheckSumType';
+import { FileHashProcessor } from '../../app/FileHashProcessor';
 
 const POSSIBLE_CHECK_SUM_TYPES = [
   Sha256CheckSum.getInstance(),
@@ -12,10 +13,15 @@ for (let i = 0; i < POSSIBLE_CHECK_SUM_TYPES.length; i++) {
   POSSIBLE_CHECK_SUM_TYPES_MAP.set(POSSIBLE_CHECK_SUM_TYPES[i].getValue(), POSSIBLE_CHECK_SUM_TYPES[i]);
 }
 
+const MAX_FILE_SIZE = 1024 * 1024;
+
+const fileHashProcessor = new FileHashProcessor();
+
 const Popup = () => {
   const [status, setStatus] = useState('');
   const [checkSumType, setCheckSumType] = useState<CheckSumType>(POSSIBLE_CHECK_SUM_TYPES[0]);
   const [checkSumText, setCheckSumText] = useState('');
+  const [fileTarget, setFileTarget] = useState<File|null>(null);
   const [resultText, setResultText] = useState('');
 
   const onCheckSumTypeChg = useCallback((e: ChangeEvent<HTMLSelectElement>) => {
@@ -30,9 +36,66 @@ const Popup = () => {
     setCheckSumText(e.target.value);
   }, [setCheckSumText]);
 
-  const onValidateBtnClick = useCallback(() => {
+  const onFileInputChg = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+    setFileTarget(e.target.files ? e.target.files[0] : null);
+  }, [setFileTarget]);
 
-  }, []);
+  const onValidateBtnClick = useCallback(async () => {
+    console.log('validate - start');
+
+    let resultText;
+
+    console.log(`validate - checkSumText: ${checkSumText}`);
+    if (checkSumText === null || checkSumText.trim() === '') {
+      console.log('invalid check sum');
+      resultText = 'Invalid check sum';
+      setResultText(resultText);
+      return;
+    }
+
+    if (!fileTarget) {
+      console.log('0 files selected');
+      resultText = 'Select a file to validate';
+      setResultText(resultText);
+      return;
+    }
+    if (!fileTarget.size) {
+      console.log('invalid file size', fileTarget);
+      resultText = 'Invalid file size';
+      setResultText(resultText);
+      return;
+    }
+    if (fileTarget.size > MAX_FILE_SIZE) {
+      console.log('file too large', fileTarget.size, fileTarget);
+      resultText = `File ${fileTarget.name} is too large, size: ${fileTarget.size}`;
+      setResultText(resultText);
+      return;
+    }
+
+    console.log('validate - processing')
+    resultText = `Validating`;
+    setResultText(resultText);
+
+    const fileHash = await fileHashProcessor.calcHash(fileTarget, checkSumType);
+    if (!fileHash) {
+      console.log('invalid file hash');
+      resultText = `Invalid file hash`;
+      setResultText(resultText);
+      return;
+    }
+
+    if (fileHash === checkSumText) {
+      console.log('Success, matching hash', fileHash, checkSumText);
+      resultText = `Success, matching hash`;
+      setResultText(resultText);
+    } else {
+      console.log('Success, unmatching hash', fileHash, checkSumText);
+      resultText = `Success, unmatching hash`;
+      setResultText(resultText);
+    }
+
+    console.log('validate - end');
+  }, [checkSumType, checkSumText, fileTarget, setResultText]);
 
   const onClearBtnClick = useCallback(() => {
     setCheckSumType(POSSIBLE_CHECK_SUM_TYPES[0]);
@@ -65,7 +128,7 @@ const Popup = () => {
         <input type="text" value={checkSumText} onChange={onCheckSumTextChg} />
       </div>
       <div>
-        <input id="fileInput" type="file" />
+        <input type="file" onChange={onFileInputChg}/>
       </div>
 
       <div className="flexHorizontal">

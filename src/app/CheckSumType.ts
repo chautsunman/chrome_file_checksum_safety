@@ -1,6 +1,8 @@
 export interface CheckSumType {
   getValue(): string;
   getDisplayStr(): string;
+
+  calcHash(data: ArrayBuffer): Promise<ArrayBuffer|null>;
 }
 
 export class Sha256CheckSum implements CheckSumType {
@@ -25,6 +27,10 @@ export class Sha256CheckSum implements CheckSumType {
   getValue(): string {
     return Sha256CheckSum.ID;
   }
+
+  calcHash(data: ArrayBuffer): Promise<ArrayBuffer|null> {
+    return window.crypto.subtle.digest('SHA-256', data);
+  }
 }
 
 export class Md5CheckSum implements CheckSumType {
@@ -48,5 +54,9 @@ export class Md5CheckSum implements CheckSumType {
 
   getValue(): string {
     return Md5CheckSum.ID;
+  }
+
+  calcHash(data: ArrayBuffer): Promise<ArrayBuffer|null> {
+    return Promise.resolve(null);
   }
 }
