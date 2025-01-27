@@ -1,7 +1,9 @@
 import React, { ChangeEvent, useCallback, useState } from 'react';
 import './Popup.css';
-import { CheckSumType, Md5CheckSum, Sha256CheckSum } from '../../app/CheckSumType';
+import { CheckSumType } from '../../app/CheckSumType';
 import { FileHashProcessor } from '../../app/FileHashProcessor';
+import { Sha256CheckSum } from '../../app/checksum/Sha256CheckSum';
+import { Md5CheckSum } from '../../app/checksum/Md5CheckSum';
 
 const POSSIBLE_CHECK_SUM_TYPES = [
   Sha256CheckSum.getInstance(),
