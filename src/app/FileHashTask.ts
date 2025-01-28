@@ -12,6 +12,7 @@ export class FileHashTask extends AbstractTask {
   private readonly checkSumText: string;
 
   private progress: number;
+  private abortController: AbortController;
 
   constructor(
     eventEmitter: EventEmitter,
@@ -24,6 +25,7 @@ export class FileHashTask extends AbstractTask {
     this.checkSumType = checkSumType;
     this.checkSumText = checkSumText;
     this.progress = 0;
+    this.abortController = new AbortController();
   }
 
   start(): void {
@@ -50,8 +52,7 @@ export class FileHashTask extends AbstractTask {
 
   stop(): void {
     super.stop();
-
-    // TODO: interrupt calcHash
+    this.abortController.abort();
   }
 
   private async calcHash(): Promise<void> {
@@ -60,17 +61,33 @@ export class FileHashTask extends AbstractTask {
       this.file,
       FileHashTask.DEFAULT_CHUNK_SIZE
     );
-    for await (const fileChunkPayload of fileStream) {
-      checkSumCalculator.update(fileChunkPayload.chunk);
-      this.progress = fileChunkPayload.chunkPercent;
-      this.emit('progress', this.progress);
+    try {
+      for await (const fileChunkPayload of fileStream) {
+        if (this.abortController.signal.aborted) {
+          console.log('calculation aborted 1');
+          return;
+        }
+        checkSumCalculator.update(fileChunkPayload.chunk);
+        if (this.abortController.signal.aborted) {
+          console.log('calculation aborted 2');
+          return;
+        }
+        this.progress = fileChunkPayload.chunkPercent;
+        this.emit('progress', this.progress);
+      }
+      if (this.abortController.signal.aborted) {
+        console.log('calculation aborted 3');
+        return;
+      }
+      this.progress = 1;
+      const hashStr = checkSumCalculator.calc();
+      if (!hashStr) {
+        this.emit('invalid-hash', null);
+      }
+      this.emit('complete', hashStr);
+    } catch (error) {
+      console.log('error while calculating hash', error);
     }
-    this.progress = 1;
-    const hashStr = checkSumCalculator.calc();
-    if (!hashStr) {
-      this.emit('invalid-hash', null);
-    }
-    this.emit('complete', hashStr);
   }
 
   private emitGeneralMsg(msg: string): void {
