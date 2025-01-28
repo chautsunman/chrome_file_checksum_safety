@@ -78,7 +78,7 @@ const Popup = () => {
     resultText = `Validating`;
     setResultText(resultText);
 
-    const fileHash = await fileHashProcessor.calcHash(fileTarget, checkSumType);
+    const fileHash = await fileHashProcessor.calcHash(fileTarget, checkSumType, 1024);
     if (!fileHash) {
       console.log('invalid file hash');
       resultText = `Invalid file hash`;

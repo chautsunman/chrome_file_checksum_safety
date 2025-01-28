@@ -1,6 +1,6 @@
 import { algo, lib, enc } from 'crypto-js';
 
-import { CheckSumType } from '../CheckSumType';
+import { CheckSumCalculator, CheckSumType } from '../CheckSumType';
 
 export class Sha256CheckSum implements CheckSumType {
   private static INSTANCE: Sha256CheckSum = new Sha256CheckSum();
@@ -24,14 +24,28 @@ export class Sha256CheckSum implements CheckSumType {
     return Sha256CheckSum.ID;
   }
 
-  async calcHash(
-    dataStream: AsyncIterable<ArrayBuffer>
-  ): Promise<string | null> {
-    const hashFunc = algo.SHA256.create();
-    for await (let arrayBuffer of dataStream) {
-      hashFunc.update(lib.WordArray.create(arrayBuffer));
-    }
-    const hash = hashFunc.finalize();
+  createCalculator(): CheckSumCalculator {
+    return new Sha256CheckSumCalculator();
+  }
+}
+
+export class Sha256CheckSumCalculator implements CheckSumCalculator {
+  private hashFunc: any;
+
+  constructor() {
+    this.hashFunc = algo.SHA256.create();
+  }
+
+  reset(): void {
+    this.hashFunc = algo.SHA256.create();
+  }
+
+  update(data: ArrayBuffer): void {
+    this.hashFunc.update(lib.WordArray.create(data));
+  }
+
+  calc(): string {
+    const hash = this.hashFunc.finalize();
     return hash.toString(enc.Hex);
   }
 }

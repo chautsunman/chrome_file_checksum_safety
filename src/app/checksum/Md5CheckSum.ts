@@ -1,6 +1,6 @@
 import { algo, lib, enc } from 'crypto-js';
 
-import { CheckSumType } from '../CheckSumType';
+import { CheckSumCalculator, CheckSumType } from '../CheckSumType';
 
 export class Md5CheckSum implements CheckSumType {
   private static INSTANCE: Md5CheckSum = new Md5CheckSum();
@@ -24,14 +24,28 @@ export class Md5CheckSum implements CheckSumType {
     return Md5CheckSum.ID;
   }
 
-  async calcHash(
-    dataStream: AsyncIterable<ArrayBuffer>
-  ): Promise<string | null> {
-    const hashFunc = algo.MD5.create();
-    for await (let arrayBuffer of dataStream) {
-      hashFunc.update(lib.WordArray.create(arrayBuffer));
-    }
-    const hash = hashFunc.finalize();
+  createCalculator(): CheckSumCalculator {
+    return new Md5CheckSumCalculator();
+  }
+}
+
+export class Md5CheckSumCalculator implements CheckSumCalculator {
+  private hashFunc: any;
+
+  constructor() {
+    this.hashFunc = algo.MD5.create();
+  }
+
+  reset(): void {
+    this.hashFunc = algo.MD5.create();
+  }
+
+  update(data: ArrayBuffer): void {
+    this.hashFunc.update(lib.WordArray.create(data));
+  }
+
+  calc(): string {
+    const hash = this.hashFunc.finalize();
     return hash.toString(enc.Hex);
   }
 }

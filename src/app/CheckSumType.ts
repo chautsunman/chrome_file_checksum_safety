@@ -2,5 +2,11 @@ export interface CheckSumType {
   getValue(): string;
   getDisplayStr(): string;
 
-  calcHash(dataStream: AsyncIterable<ArrayBuffer>): Promise<string | null>;
+  createCalculator(): CheckSumCalculator;
+}
+
+export interface CheckSumCalculator {
+  reset(): void;
+  update(data: ArrayBuffer): void;
+  calc(): string;
 }
