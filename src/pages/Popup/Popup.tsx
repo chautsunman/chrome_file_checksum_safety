@@ -1,9 +1,11 @@
-import React, { ChangeEvent, useCallback, useState } from 'react';
+import React, { ChangeEvent, useCallback, useEffect, useState } from 'react';
 import './Popup.css';
 import { CheckSumType } from '../../app/CheckSumType';
-import { FileHashProcessor } from '../../app/FileHashProcessor';
 import { Sha256CheckSum } from '../../app/checksum/Sha256CheckSum';
 import { Md5CheckSum } from '../../app/checksum/Md5CheckSum';
+import { Task } from '../../app/Task';
+import { FileHashTask } from '../../app/FileHashTask';
+import { EventEmitter } from 'events';
 
 const POSSIBLE_CHECK_SUM_TYPES = [
   Sha256CheckSum.getInstance(),
@@ -15,16 +17,14 @@ for (let i = 0; i < POSSIBLE_CHECK_SUM_TYPES.length; i++) {
   POSSIBLE_CHECK_SUM_TYPES_MAP.set(POSSIBLE_CHECK_SUM_TYPES[i].getValue(), POSSIBLE_CHECK_SUM_TYPES[i]);
 }
 
-const MAX_FILE_SIZE = 1024 * 1024;
-
-const fileHashProcessor = new FileHashProcessor();
+const eventEmitter = new EventEmitter();
 
 const Popup = () => {
-  const [status, setStatus] = useState('');
   const [checkSumType, setCheckSumType] = useState<CheckSumType>(POSSIBLE_CHECK_SUM_TYPES[0]);
   const [checkSumText, setCheckSumText] = useState('');
   const [fileTarget, setFileTarget] = useState<File|null>(null);
   const [resultText, setResultText] = useState('');
+  const [fileHashTask, setFileHashTask] = useState<Task|null>(null);
 
   const onCheckSumTypeChg = useCallback((e: ChangeEvent<HTMLSelectElement>) => {
     const newCheckSumTypeValue = e.target.value;
@@ -43,77 +43,56 @@ const Popup = () => {
   }, [setFileTarget]);
 
   const onValidateBtnClick = useCallback(async () => {
-    console.log('validate - start');
-
-    let resultText;
-
-    console.log(`validate - checkSumText: ${checkSumText}`);
-    if (checkSumText === null || checkSumText.trim() === '') {
-      console.log('invalid check sum');
-      resultText = 'Invalid check sum';
-      setResultText(resultText);
-      return;
-    }
-
+    console.log(`validate - start - checkSumText: ${checkSumText}`);
     if (!fileTarget) {
       console.log('0 files selected');
-      resultText = 'Select a file to validate';
-      setResultText(resultText);
+      setResultText('Select a file to validate');
       return;
     }
-    if (!fileTarget.size) {
-      console.log('invalid file size', fileTarget);
-      resultText = 'Invalid file size';
-      setResultText(resultText);
-      return;
-    }
-    if (fileTarget.size > MAX_FILE_SIZE) {
-      console.log('file too large', fileTarget.size, fileTarget);
-      resultText = `File ${fileTarget.name} is too large, size: ${fileTarget.size}`;
-      setResultText(resultText);
-      return;
-    }
-
     console.log('validate - processing')
-    resultText = `Validating`;
-    setResultText(resultText);
-
-    const fileHash = await fileHashProcessor.calcHash(fileTarget, checkSumType, 1024);
-    if (!fileHash) {
-      console.log('invalid file hash');
-      resultText = `Invalid file hash`;
-      setResultText(resultText);
-      return;
-    }
-
-    if (fileHash === checkSumText) {
-      console.log('Success, matching hash', fileHash, checkSumText);
-      resultText = `Success, matching hash`;
-      setResultText(resultText);
-    } else {
-      console.log('Success, unmatching hash', fileHash, checkSumText);
-      resultText = `Success, unmatching hash`;
-      setResultText(resultText);
-    }
-
+    setResultText('Validating');
+    const fileHashTask = new FileHashTask(eventEmitter, fileTarget, checkSumType, checkSumText);
+    fileHashTask.start();
+    setFileHashTask(fileHashTask);
     console.log('validate - end');
-  }, [checkSumType, checkSumText, fileTarget, setResultText]);
+  }, [checkSumType, checkSumText, fileTarget, setFileHashTask]);
 
   const onClearBtnClick = useCallback(() => {
+    if (fileHashTask) {
+      fileHashTask.stop();
+    }
+    setFileHashTask(null);
     setCheckSumType(POSSIBLE_CHECK_SUM_TYPES[0]);
     setCheckSumText('');
     setResultText('');
-  }, [setCheckSumText, setResultText]);
+  }, [setCheckSumType, setCheckSumText, setResultText, fileHashTask, setFileHashTask]);
+
+  useEffect(() => {
+    eventEmitter.on('FileHashTask-progress', (progress: number) => {
+      console.log('progress', progress);
+      setResultText(`Validating - ${progress * 100}%`);
+    });
+    eventEmitter.on('FileHashTask-complete', (hashStr: string) => {
+      console.log('complete', hashStr, checkSumText);
+      if (hashStr === checkSumText) {
+        setResultText(`Success, matching hash`);
+      } else {
+        setResultText(`Success, unmatching hash`);
+      }
+    });
+    eventEmitter.on('FileHashTask-invalid-hash', (payload: null) => {
+      console.log('invalid-hash');
+      setResultText(`Invalid file hash`);
+    });
+    eventEmitter.on('FileHashTask-general-msg', (msg: string) => {
+      console.log('general-msg', msg);
+      setResultText(msg);
+    });
+  }, [checkSumText, setResultText]);
 
   return (
     <div className="App">
       <h1>Validate file</h1>
-
-      <div className="flexHorizontal">
-        <div>Status:</div>
-        <div className="flexHorizontalSpacer"></div>
-        <div>{status}</div>
-      </div>
 
       <div className="flexHorizontal">
         <div>Checksum type:</div>
